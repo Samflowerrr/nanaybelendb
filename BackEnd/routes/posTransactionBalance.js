@@ -75,35 +75,32 @@ router.get('/branchesFound', async (req, res) => {
 /*==================================
             GET CATEGORY
 ==================================*/
+
 router.get('/category', async (req, res) => {
+  try {
+    const category = req.query.category; 
 
-    console.log("category found")
-    const category = await PosTransactionBalance.aggregate([
-
+    const result = await PosTransactionBalance.aggregate([
       { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
-
       {
-
         $project: {
-
           _id: 1,
-          'branch': '$branch',
-          'category': '$register.category',
-          'productName': '$register.productName',
-          'qty': '$register.qty',
-          'price': '$register.price', 
+          branch: '$branch',
+          category: '$register.category',
+          productName: '$register.productName',
+          qty: '$register.qty',
+          price: '$register.price',
         }
-
       },
-
-      { $match: { $and: [{ category: "Beverage" }] } },
-
-      
+      { $match: { category: category } },
     ]);
-  
-    res.json({ success: true, category })
 
+    res.json({ success: true, category: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
 });
+
 
 
 /*============================================
@@ -147,45 +144,54 @@ router.get('/sum', async (req, res) => {
 =================================================================*/
 
 router.get('/specific', async (req, res) => {
-  console.log("amount found");
-  const startDate = new Date(req.query.startDate); 
+  try {
+    console.log("amount found");
+
+    const branchName = req.query.branch;
+    const category = req.query.category; 
+    const productName = req.query.productName;
+    const startDate = new Date(req.query.startDate); 
     const endDate = new Date(req.query.endDate);
 
-  const amount = await PosTransactionBalance.aggregate([
-    { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        _id: 1,
-        soldQty: '$register.soldQty',
-        price: '$register.price',
-        category: '$register.category',
-        productName: '$register.productName',
-        branch: '$branch',
-        completionTime: '$completionTime',
-        amount: { $multiply: ['$register.soldQty', '$register.price'] }
+    const amount = await PosTransactionBalance.aggregate([
+      { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          soldQty: '$register.soldQty',
+          price: '$register.price',
+          category: '$register.category',
+          productName: '$register.productName',
+          branch: '$branch',
+          completionTime: '$completionTime',
+          amount: { $multiply: ['$register.soldQty', '$register.price'] }
+        }
+      },
+      {
+        $match: {
+          category: category,
+          productName: productName,
+          branch: branchName,
+          completionTime: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        }
+      },
+      {
+        $group: {
+          _id: { branch: '$branch', category: '$category', productName: '$productName' },
+          totalAmount: { $sum: '$amount' }
+        }
       }
-    },
-    {
-      $match: {
-        category: "Tam-Ison",
-        productName: "MAMON",
-        branch: "Naga",
-        completionTime: {
-          $gte: startDate,
-          $lte: endDate,
-        },
-      }
-    },
-    {
-      $group: {
-        _id: { branch: '$branch', category: '$category', productName:'$productName' },
-        totalAmount: { $sum: '$amount' }
-      }
-    }
-  ]);
+    ]);
 
-  res.json({ success: true, amount });
+    res.json({ success: true, amount });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Something went wrong' });
+  }
 });
+
 
 
 
@@ -196,7 +202,7 @@ router.get('/specific', async (req, res) => {
 
 router.get('/Least', async (req, res) => {
   try {
-    const branchName = "Basak";
+    const branchName = req.query.branch;
     
     const leastSellingProduct = await PosTransactionBalance.aggregate([
       { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
@@ -243,7 +249,7 @@ router.get('/Least', async (req, res) => {
 
 router.get('/allLeast', async (req, res) => {
   try {
-    const branchName = req.query.branchName || 'Opon 1';
+    const branchName = req.query.branch;
     
     const leastSellingProducts = await PosTransactionBalance.aggregate([
       { $unwind: { path: '$register', preserveNullAndEmptyArrays: true } },
@@ -294,7 +300,7 @@ router.get('/allLeast', async (req, res) => {
 
 router.get('/leastwithDate', async (req, res) => {
   try {
-    const branchName = "Tayud";
+    const branchName = req.query.branch;
     const startDate = new Date('2022-05-01'); 
     const endDate = new Date('2022-05-30'); 
     
@@ -352,7 +358,7 @@ router.get('/leastwithDate', async (req, res) => {
 
 router.get('/mostSold', async (req, res) => {
   try {
-    const branchName = "Tayud";
+    const branchName = req.query.branch;
     
     const mostSoldProduct = await PosTransactionBalance.aggregate([
       { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
@@ -400,7 +406,7 @@ router.get('/mostSold', async (req, res) => {
 
 router.get('/allMost', async (req, res) => {
   try {
-    const branchName = "Basak"; 
+    const branchName = req.query.branch;
     
     const mostSoldProducts = await PosTransactionBalance.aggregate([
       { $unwind: { path: '$register', preserveNullAndEmptyArrays: true } },
@@ -441,7 +447,7 @@ router.get('/allMost', async (req, res) => {
 
 router.get('/mostSoldwithDate', async (req, res) => {
   try {
-    const branchName = "Basak";
+    const branchName = req.query.branch;
     const startDate = new Date(req.query.startDate); 
     const endDate = new Date(req.query.endDate); 
     
