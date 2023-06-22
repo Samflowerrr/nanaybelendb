@@ -148,7 +148,8 @@ router.get('/sum', async (req, res) => {
 
 router.get('/specific', async (req, res) => {
   console.log("amount found");
-  const startDate = new Date("2022-05-01")
+  const startDate = new Date(req.query.startDate); 
+    const endDate = new Date(req.query.endDate);
 
   const amount = await PosTransactionBalance.aggregate([
     { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
@@ -171,7 +172,7 @@ router.get('/specific', async (req, res) => {
         branch: "Naga",
         completionTime: {
           $gte: startDate,
-          $lte: new Date("2022-05-30"),
+          $lte: endDate,
         },
       }
     },
@@ -311,7 +312,10 @@ router.get('/leastwithDate', async (req, res) => {
       {
         $match: {
           branch: branchName,
-          completionTime: { $gte: startDate, $lte: endDate },
+          completionTime: { 
+            $gte: startDate, 
+            $lte: endDate
+          },
         }
       },
       {
@@ -396,7 +400,7 @@ router.get('/mostSold', async (req, res) => {
 
 router.get('/allMost', async (req, res) => {
   try {
-    const branchName = req.query.branchName || 'Basak'; // Get the branch name from the query parameter, defaulting to 'Basak' if not provided
+    const branchName = "Basak"; 
     
     const mostSoldProducts = await PosTransactionBalance.aggregate([
       { $unwind: { path: '$register', preserveNullAndEmptyArrays: true } },
@@ -438,8 +442,8 @@ router.get('/allMost', async (req, res) => {
 router.get('/mostSoldwithDate', async (req, res) => {
   try {
     const branchName = "Basak";
-    const startDate = new Date('2022-03-01');
-    const endDate = new Date('2022-03-30');
+    const startDate = new Date(req.query.startDate); 
+    const endDate = new Date(req.query.endDate); 
     
     const mostSoldProduct = await PosTransactionBalance.aggregate([
       { $unwind: { path: "$register", preserveNullAndEmptyArrays: true } },
@@ -485,6 +489,7 @@ router.get('/mostSoldwithDate', async (req, res) => {
 
 
 
+
 /*=========================================================
           DELETE OTHER DATA AND REMAIN 100 DATA
 =========================================================*/
@@ -495,6 +500,35 @@ router.delete('/deleteTransactionBalance', async (req, res) => {
     res.json({ success: true, branches })
 
 });
+
+
+
+/*=============================================
+============DELETE THE ENTIRE ARRAY============
+=============================================*/
+
+router.delete('/productsedit', async (req, res) => {
+  try {
+    const Id = "6222c8db961009fdecc50817"
+    const productId = "622356f2961009fdecc50ee1";
+    const newSoldQty = 11;
+
+    const result = await posTransactionBalance.updateOne( 
+      { _id: Id, register: { $elemMatch: { sku: "8" } } },
+      { $pull: { register: {sku: "8"} } }
+    );
+
+console.log (result)
+
+    if (result.nModified === 0) {
+      return res.status(404).json({ success: false, message: 'No changes will be updated' });
+    }
+
+    res.json({ success: true, message: 'Product quantity updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Something went wrong' });
+  } 
+}); 
 
 
 
@@ -512,23 +546,23 @@ router.get('/sumeveryday', async (req, res) => {
       $project: {
         _id: 1,
         'amount': { $multiply: ['$register.soldQty', '$register.price'] },
-        'dayOfWeek': { $dayOfWeek: "$completionTime" } // Extract day of the week from the date
+        'dayOfWeek': { $dayOfWeek: "$completionTime" } 
       }
     },
     {
       $match: {
-        dayOfWeek: { $in: [1, 2, 3, 4, 5, 6, 7] } // Match transactions on any day of the week
+        dayOfWeek: { $in: [1, 2, 3, 4, 5, 6, 7] } 
       }
     },
     {
       $group: {
-        _id: "$dayOfWeek", // Group by day of the week
+        _id: "$dayOfWeek", 
         totalAmount: { $sum: '$amount' }
       }
     },
     {
       $sort: {
-        totalAmount: 1 // Sort totalAmount in ascending order
+        totalAmount: 1 
       }
     }
   ]);
@@ -552,28 +586,28 @@ router.get('/summm', async (req, res) => {
       $project: {
         _id: 1,
         'amount': { $multiply: ['$register.soldQty', '$register.price'] },
-        'month': { $month: "$completionTime" }, // Extract month from the date
-        'branch': '$branch' // Include the branch field
+        'month': { $month: "$completionTime" }, 
+        'branch': '$branch' 
       }
     },
     {
       $group: {
         _id: {
-          branch: '$branch', // Group by branch
-          month: '$month' // Group by month
+          branch: '$branch', 
+          month: '$month' 
         },
         totalAmount: { $sum: '$amount' }
       }
     },
     {
       $group: {
-        _id: '$_id.branch', // Group by branch only
+        _id: '$_id.branch', 
         monthlyAmounts: { $push: { month: '$_id.month', totalAmount: '$totalAmount' } } // Collect monthly amounts
       }
     },
     {
       $sort: {
-        'monthlyAmounts.totalAmount': 1 // Sort monthlyAmounts by totalAmount in ascending order
+        'monthlyAmounts.totalAmount': 1 
       }
     }
   ]);
@@ -593,17 +627,17 @@ router.put('/productsedit', async (req, res) => {
   try {
     const Id = "6222c8db961009fdecc50817"
     const productId = "622356f2961009fdecc50ee1";
-    const newSoldQty = 11;
+    const newSoldQty = 12;
 
     const result = await posTransactionBalance.updateOne( 
-      { _id: Id, register: { $elemMatch: { sku: "8" } } },
+      { _id: Id, register: { $elemMatch: { sku: "12" } } },
       { $set: { "register.$.soldQty": newSoldQty } }
     );
 
 console.log (result)
 
     if (result.nModified === 0) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res.status(404).json({ success: false, message: 'No changes will be updated' });
     }
 
     res.json({ success: true, message: 'Product quantity updated successfully' });
